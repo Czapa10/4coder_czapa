@@ -168,7 +168,7 @@ open_footer_panel(Application_Links *app, View_ID view){
     Buffer_ID buffer = view_get_buffer(app, special_view, Access_Always);
     Face_ID face_id = get_face_id(app, buffer);
     Face_Metrics metrics = get_face_metrics(app, face_id);
-    view_set_split_pixel_size(app, special_view, (i32)(metrics.line_height*14.f));
+    view_set_split_pixel_size(app, special_view, (i32)metrics.line_height * BuildBufferHeightInLines);
     view_set_passive(app, special_view, true);
     return(special_view);
 }
@@ -182,11 +182,37 @@ close_build_footer_panel(Application_Links *app){
 }
 
 function View_ID
-open_build_footer_panel(Application_Links *app){
-    if (!view_exists(app, build_footer_panel_view_id)){
-        View_ID view = get_active_view(app, Access_Always);
-        build_footer_panel_view_id = open_footer_panel(app, view);
-        view_set_active(app, view);
+open_build_footer_panel(Application_Links *app)
+{
+    if(!view_exists(app, build_footer_panel_view_id))
+    {
+        // The commented code before was written by Czapa. It was meant to open the build panel under both of existing panels. However if causes a crash and I don't know why so for now I'm going to leave this like that.
+        
+        /* 
+                // close panel
+                Scratch_Block Scratch(app);
+                View_ID ViewToClose = get_active_view(app, Access_Always);
+                Buffer_ID Buffer = view_get_buffer(app, ViewToClose, Access_Visible);
+                String_Const_u8 FilePathOfClosedPanel = push_buffer_file_name(app, Scratch, Buffer);
+                bool ClosedPanel = view_close(app, ViewToClose);
+                 */
+        
+        // open build panel
+        View_ID CodeViewThatWasLeft = get_active_view(app, Access_Always);
+        build_footer_panel_view_id = open_footer_panel(app, CodeViewThatWasLeft);
+        view_set_active(app, CodeViewThatWasLeft);
+        
+        /*         
+                if(ClosedPanel)
+                {
+                    // reopen closed panel
+                    open_panel_vsplit(app);
+                    View_ID ReopenedView = get_active_view(app, Access_Always);
+                    Buffer = create_buffer(app, FilePathOfClosedPanel, 0);
+                    if(Buffer)
+                        view_set_buffer(app, ReopenedView, Buffer, 0);
+                }
+         */
     }
     return(build_footer_panel_view_id);
 }

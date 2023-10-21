@@ -13,7 +13,7 @@ CUSTOM_DOC("Default command for responding to a startup event")
         String_Const_u8_Array file_names = input.event.core.file_names;
         load_themes_default_folder(app);
         default_4coder_initialize(app, file_names);
-        default_4coder_side_by_side_panels(app, file_names);
+        default_4coder_one_panel(app, file_names);
         b32 auto_load = def_get_config_b32(vars_save_string_lit("automatically_load_project"));
         if (auto_load){
             load_project(app);

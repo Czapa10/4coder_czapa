@@ -101,6 +101,8 @@ CUSTOM_COMMAND_SIG(write_zero_struct)
 CUSTOM_DOC("At the cursor, insert a ' = {};'.")
 {
     write_string(app, string_u8_litexpr(" = {};"));
+    move_left(app);
+    move_left(app);
 }
 
 function i64
@@ -162,36 +164,6 @@ CUSTOM_DOC("Turns uncommented lines into commented lines and vice versa for comm
 }
 
 ////////////////////////////////
-
-static Snippet default_snippets[] = {
-    // general (for Allen's style)
-    {"if",     "if (){\n\n}\n", 4, 7},
-    {"ifelse", "if (){\n\n}\nelse{\n\n}", 4, 7},
-    {"forn",   "for (node = ;\nnode != 0;\nnode = node->next){\n\n}\n", 5, 38},
-    {"fori",   "for (i = 0; i < ; i += 1){\n\n}\n", 5, 16},
-    {"forj",   "for (j = 0; j < ; j += 1){\n\n}\n", 5, 16},
-    {"fork",   "for (k = 0; k < ; k += 1){\n\n}\n", 5, 16},
-    {"for",    "for (;;){\n\n}\n", 5, 10},
-    {"///",    "////////////////////////////////", 32, 32},
-    {"#guard", "#if !defined(Z)\n#define Z\n#endif\n", 0, 26},
-    
-    {"op+",  "Z\noperator+(Z a, Z b){\n,\n}\n", 0, 23},
-    {"op-",  "Z\noperator-(Z a, Z b){\n,\n}\n", 0, 23},
-    {"op*",  "Z\noperator*(Z a, Z b){\n,\n}\n", 0, 23},
-    {"op/",  "Z\noperator/(Z a, Z b){\n,\n}\n", 0, 23},
-    {"op+=", "Z&\noperator+=(Z &a, Z b){\n,\n}\n", 0, 26},
-    {"op-=", "Z&\noperator-=(Z &a, Z b){\n,\n}\n", 0, 26},
-    {"op*=", "Z&\noperator*=(Z &a, Z b){\n,\n}\n", 0, 26},
-    {"op/=", "Z&\noperator/=(Z &a, Z b){\n,\n}\n", 0, 26},
-    
-    // for 4coder development
-    {"4command", "CUSTOM_COMMAND_SIG()\nCUSTOM_DOC()\n{\n\n}\n", 19, 32},
-    {"4app", "Application_Links *app", 22, 22},
-    
-#if defined(SNIPPET_EXPANSION)
-#include SNIPPET_EXPANSION
-#endif
-};
 
 function void
 write_snippet(Application_Links *app, View_ID view, Buffer_ID buffer,

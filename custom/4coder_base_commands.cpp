@@ -357,6 +357,16 @@ CUSTOM_DOC("Moves the cursor down ten lines.")
     move_vertical_lines(app, 10);
 }
 
+CUSTOM_COMMAND_SIG(move_up_20)
+{
+    move_vertical_lines(app, -20);
+}
+
+CUSTOM_COMMAND_SIG(move_down_20)
+{
+    move_vertical_lines(app, 20);
+}
+
 CUSTOM_COMMAND_SIG(move_down_textual)
 CUSTOM_DOC("Moves down to the next line of actual text, regardless of line wrapping.")
 {
@@ -866,6 +876,7 @@ CUSTOM_DOC("Queries the user for a number, and jumps the cursor to the correspon
         i32 line_number = (i32)string_to_integer(bar.string, 10);
         View_ID view = get_active_view(app, Access_ReadVisible);
         view_set_cursor_and_preferred_x(app, view, seek_line_col(line_number, 0));
+        center_view(app);
     }
 }
 
@@ -933,6 +944,8 @@ isearch(Application_Links *app, Scan_Direction start_scan, i64 first_pos,
         if (in.abort){
             break;
         }
+        
+        CzapaState.LastSearch = ToStaticString(bar.string);
         
         String_Const_u8 string = to_writable(&in);
         
@@ -1093,7 +1106,7 @@ isearch(Application_Links *app, Scan_Direction start_scan, String_Const_u8 query
 function void
 isearch(Application_Links *app, Scan_Direction start_scan){
     View_ID view = get_active_view(app, Access_ReadVisible);
-    i64 pos = view_get_cursor_pos(app, view);;
+    i64 pos = view_get_cursor_pos(app, view);
     isearch(app, start_scan, pos, SCu8());
 }
 
@@ -1269,6 +1282,9 @@ query_replace_parameter(Application_Links *app, String_Const_u8 replace_str, i64
         String_Const_u8 r = replace.string;
         String_Const_u8 w = with.string;
         
+        CzapaState.LastReplace.ReplaceString = ToStaticString(r);
+        CzapaState.LastReplace.WithString = ToStaticString(w);
+        
         View_ID view = get_active_view(app, Access_ReadVisible);
         Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
         i64 pos = start_pos;
@@ -1331,6 +1347,31 @@ CUSTOM_DOC("Queries the user for a string, and incrementally replace every occur
             query_replace_parameter(app, replace, range.min, true);
         }
     }
+}
+
+CUSTOM_COMMAND_SIG(QueryReplaceUsingPreviousReplaceValue)
+{
+    View_ID view = get_active_view(app, Access_ReadWriteVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+    if (buffer != 0){
+        Scratch_Block scratch(app);
+        Range_i64 range = get_view_range(app, view);
+        i64 CursorPos = view_get_cursor_pos(app, view);
+        String_Const_u8 replace = ToStringConstU8(CzapaState.LastReplace.ReplaceString);
+        if (replace.size != 0){
+            query_replace_parameter(app, replace, CursorPos, true);
+        }
+    }
+}
+
+CUSTOM_COMMAND_SIG(QueryReplaceUsingPreviousValues)
+{
+    View_ID view = get_active_view(app, Access_ReadWriteVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+    i64 pos = view_get_cursor_pos(app, view);
+    String_Const_u8 Replace = ToStringConstU8(CzapaState.LastReplace.ReplaceString);
+    String_Const_u8 With = ToStringConstU8(CzapaState.LastReplace.WithString);
+    query_replace_base(app, view, buffer, pos, Replace, With);
 }
 
 ////////////////////////////////

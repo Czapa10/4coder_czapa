@@ -65,6 +65,8 @@
 #include "4coder_tutorial.h"
 #include "4coder_search_list.h"
 
+#include "czapa_4coder.h"
+
 ////////////////////////////////
 
 #include "4coder_base_types.cpp"
@@ -110,7 +112,7 @@
 #include "4coder_font_helper.cpp"
 #include "4coder_config.cpp"
 #include "4coder_dynamic_bindings.cpp"
-#include "4coder_default_framework.cpp"
+#include "czapa_default_framework.cpp"
 #include "4coder_clipboard.cpp"
 #include "4coder_lister_base.cpp"
 #include "4coder_base_commands.cpp"

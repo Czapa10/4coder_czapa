@@ -207,6 +207,11 @@ CUSTOM_DOC("Reads the string in the selected range and lists all exact case-sens
     list_all_locations__generic_view_range(app, ListAllLocationsFlag_CaseSensitive);
 }
 
+CUSTOM_COMMAND_SIG(list_all_substring_locations_of_selection)
+{
+    list_all_locations__generic_view_range(app, ListAllLocationsFlag_CaseSensitive|ListAllLocationsFlag_MatchSubstring);
+}
+
 CUSTOM_COMMAND_SIG(list_all_locations_of_selection_case_insensitive)
 CUSTOM_DOC("Reads the string in the selected range and lists all exact case-insensitive mathces in all open buffers.")
 {

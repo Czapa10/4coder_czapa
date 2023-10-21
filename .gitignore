@@ -1,0 +1,12 @@
+.vs/
+fonts/
+themes/
+*.dll
+*.exe
+*.sln
+*.obj
+*.exp
+*.lib
+*.pdb
+*.rdbg
+*.4coder

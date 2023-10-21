@@ -172,6 +172,8 @@ build_language_model(void){
     sm_key("Unsigned");
     sm_key("Signed");
     sm_key("Const");
+    sm_key("Constexpr");
+    sm_key("Concept");
     sm_key("Volatile");
     sm_key("Asm");
     sm_key("Break");
@@ -232,6 +234,7 @@ build_language_model(void){
     
     // My crazy macro keywords
     sm_key("Fn");
+    sm_key("Fnr");
     sm_key("Global");
     sm_key("Const_on_release");
     sm_key("Local_persist");

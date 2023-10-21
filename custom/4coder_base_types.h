@@ -899,7 +899,7 @@ enum{
 struct String_Const_char{
     char *str;
     u64 size;
-};
+};	
 struct String_Const_u8{
     u8 *str;
     u64 size;

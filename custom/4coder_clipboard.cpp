@@ -127,6 +127,14 @@ CUSTOM_DOC("Cut the text in the range from the cursor to the mark onto the clipb
     }
 }
 
+CUSTOM_COMMAND_SIG(Delete)
+{
+    View_ID view = get_active_view(app, Access_ReadWriteVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+    Range_i64 range = get_view_range(app, view);
+    buffer_replace_range(app, buffer, range, string_u8_empty);
+}
+
 CUSTOM_COMMAND_SIG(paste)
 CUSTOM_DOC("At the cursor, insert the text at the top of the clipboard.")
 {

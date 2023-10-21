@@ -40,6 +40,8 @@ set opts=%opts% -I"%custom_root%"
 set opts=%opts% /D OS_WINDOWS=1 /D OS_LINUX=0 /D OS_MAC=0
 set opts=%opts% %mode%
 
+if "%2" == "release" (set opts=%opts% /DRELEASE_BUILD)
+
 set preproc_file=4coder_command_metadata.i
 set meta_opts=/P /Fi"%preproc_file%" /DMETA_PASS
 
