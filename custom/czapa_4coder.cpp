@@ -1414,8 +1414,6 @@ custom_layer_init
 #endif
 
 /* TODO:
-Normal mode - Add Ctr+F4 and Alt+F4 (replace in entire buffer, for indentifier and selection)
-
 Changing variable name to my current style shortcut
 Take in parenthesis shortcut - Put opening one after the cursor, Put closing one before the last character in the line (presumebly the last character is ;)
 Make editor check if the file it has loaded has changed and then automatically load it again
