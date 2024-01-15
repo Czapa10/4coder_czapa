@@ -154,6 +154,9 @@ CUSTOM_COMMAND_SIG(WriteTodo)
 CUSTOM_COMMAND_SIG(WriteTodoNow)
 { WriteText(app, " // TODO(now): "); }
 
+CUSTOM_COMMAND_SIG(WriteTodoNowUseOrDeleteIt)
+{ WriteText(app, " // TODO(now): Use or delete it"); }
+
 CUSTOM_COMMAND_SIG(WriteNote)
 { WriteText(app, " // NOTE: "); }
 
@@ -1070,6 +1073,33 @@ CUSTOM_COMMAND_SIG(SearchTodoNow)
     list_all_locations__generic(app, String, 0);
 }
 
+CUSTOM_COMMAND_SIG(ReopenAllLoadedFiles)
+{
+    Scratch_Block scratch(app);
+    for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWriteVisible);
+         buffer != 0;
+         buffer = get_buffer_next(app, buffer, Access_ReadWriteVisible)){
+        Dirty_State dirty = buffer_get_dirty_state(app, buffer);
+        if (dirty != DirtyState_UnsavedChanges){
+            buffer_reopen(app, buffer, 0);
+        }
+    }
+}
+
+CUSTOM_COMMAND_SIG(CreateBreakpointInRemedyBG)
+{
+    Scratch_Block Scratch(app);
+    View_ID View = get_active_view(app, Access_Always);
+    Buffer_ID Buffer = view_get_buffer(app, View, Access_Always);
+    String_Const_u8 FileName = push_buffer_file_name(app, Scratch, Buffer);
+    i64 CursorPos = view_get_cursor_pos(app, View);
+    Buffer_Cursor Cursor = view_compute_cursor(app, View, seek_pos(CursorPos));
+    
+    char Command[512];
+    sprintf(Command, "start remedybg add-breakpoint-at-file %s %d", GetCString(FileName), (i32)Cursor.line);
+    system(Command);
+}
+
 fn SetupSharedKeyBindings
 (Mapping* m, Command_Map* map)
 {
@@ -1127,11 +1157,16 @@ fn SetupKeyBindings
     
     Bind(save_all_dirty_buffers, KeyCode_Escape);
     Bind(reopen, KeyCode_F2);
+    Bind(ReopenAllLoadedFiles, KeyCode_F2, KeyCode_Alt);
     Bind(list_all_substring_locations_case_insensitive, KeyCode_F3);
     Bind(list_all_locations_of_identifier, KeyCode_F3, KeyCode_Control);
     Bind(list_all_substring_locations_of_selection, KeyCode_F3, KeyCode_Alt);
     Bind(replace_in_buffer, KeyCode_F4);
     Bind(replace_in_all_buffers, KeyCode_F4, KeyCode_Shift);
+    Bind(ReplaceInBufferIdentifier, KeyCode_F4, KeyCode_Control);
+    Bind(ReplaceInAllBuffersIdentifier, KeyCode_F4, KeyCode_Shift, KeyCode_Control);
+    Bind(ReplaceInBufferSelection, KeyCode_F4, KeyCode_Control, KeyCode_Alt);
+    Bind(ReplaceInAllBuffersSelection, KeyCode_F4, KeyCode_Shift, KeyCode_Control, KeyCode_Alt);
     Bind(query_replace, KeyCode_F5);
     Bind(query_replace_identifier, KeyCode_F5, KeyCode_Control);
     Bind(query_replace_selection, KeyCode_F5, KeyCode_Alt);
@@ -1140,8 +1175,10 @@ fn SetupKeyBindings
     Bind(jump_to_definition, KeyCode_F6);
     Bind(jump_to_definition_at_cursor, KeyCode_F6, KeyCode_Control);
     Bind(JumpToDefinitionInOtherPanel, KeyCode_F6, KeyCode_Control, KeyCode_Shift);
+    Bind(CreateBreakpointInRemedyBG, KeyCode_F7);
     Bind(SearchTodoNow, KeyCode_F8);
     Bind(open_matching_file_cpp, KeyCode_F9);
+    Bind(OpenMatchingFileCppInCurrentView, KeyCode_F9, KeyCode_Control);
     Bind(toggle_line_numbers, KeyCode_F10);
     Bind(load_project, KeyCode_F12);
     Bind(place_in_scope, KeyCode_Equal);
@@ -1234,6 +1271,7 @@ fn SetupKeyBindings
     Bind(move_right, KeyCode_Right);
     Bind(move_up, KeyCode_Up);
     Bind(move_down, KeyCode_Down);
+    Bind(ReopenAllLoadedFiles, KeyCode_F2, KeyCode_Alt);
     Bind(delete_char, KeyCode_Delete);
     Bind(backspace_char, KeyCode_Backspace);
     Bind(MoveUpToBlankLineEnd, KeyCode_Up, KeyCode_Control);
@@ -1250,6 +1288,7 @@ fn SetupKeyBindings
     Bind(WriteReturnFromVoidFunction, KeyCode_R, KeyCode_Alt, KeyCode_Shift);
     Bind(WriteTodo, KeyCode_T, KeyCode_Alt);
     Bind(WriteTodoNow, KeyCode_T, KeyCode_Alt, KeyCode_Shift);
+    Bind(WriteTodoNowUseOrDeleteIt, KeyCode_T, KeyCode_Alt, KeyCode_Shift, KeyCode_Control);
     Bind(WriteNote, KeyCode_N, KeyCode_Alt);
     Bind(WriteBool, KeyCode_B, KeyCode_Alt);
     Bind(WriteU32, KeyCode_U, KeyCode_Alt);
@@ -1375,11 +1414,11 @@ custom_layer_init
 #endif
 
 /* TODO:
+Normal mode - Add Ctr+F4 and Alt+F4 (replace in entire buffer, for indentifier and selection)
+
 Changing variable name to my current style shortcut
 Take in parenthesis shortcut - Put opening one after the cursor, Put closing one before the last character in the line (presumebly the last character is ;)
-Normal mode - Add Ctr+F4 and Alt+F4 (replace in entire buffer, for indentifier and selection)
 Make editor check if the file it has loaded has changed and then automatically load it again
-Open matching h/cpp file in the current panel
 --
 (I asked qustion about it on the forum) Make the compilation shortcut open the build buffer under both panels
 Make namespaces not indent

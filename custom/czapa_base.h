@@ -29,8 +29,37 @@ struct static_string
     char Characters[Size];
     u64 Count;
     
+    void Clear()
+    { Count = 0; }
+    
     void operator+=(char C)
     { Characters[Count++] = C; }
+    
+    void operator+=
+    (String_Const_u8 Str)
+    {
+        for(u32 I = 0; I < Str.size; I++)
+            Characters[Count++] = Str.str[I];
+    }
+    
+    void operator+=
+    (const char* Str)
+    {
+        while(*Str)
+        {
+            Characters[Count++] = *Str;
+            Str++;
+        }
+    }
+    
+    void PutNullCharAtEnd()
+    { Characters[Count] = 0; }
+    
+    const char* GetCString()
+    {
+        PutNullCharAtEnd();
+        return Characters;
+    }
 };
 
 template<u32 ResSize = DefaultStringSize>
@@ -63,6 +92,13 @@ fn ToStringConstU8
 	Res.str = (u8*)Str;
 	Res.size = strlen(Str);
 	return Res;
+}
+
+fn GetCString
+(String_Const_u8 Str)
+{
+    Str.str[Str.size] = 0;
+    return Str.str;
 }
 
 template<class code> struct _defer 

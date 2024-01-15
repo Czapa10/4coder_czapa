@@ -129,6 +129,7 @@ CUSTOM_DOC("Swaps the position of the cursor and the mark.")
     i64 mark = view_get_mark_pos(app, view);
     view_set_cursor_and_preferred_x(app, view, seek_pos(mark));
     view_set_mark(app, view, seek_pos(cursor));
+    center_view(app);
 }
 
 CUSTOM_COMMAND_SIG(delete_range)
@@ -1212,14 +1213,129 @@ CUSTOM_DOC("Queries the user for a needle and string. Replaces all occurences of
     Scratch_Block scratch(app);
     Query_Bar_Group group(app);
     String_Pair pair = query_user_replace_pair(app, scratch);
-    for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWriteVisible);
-         buffer != 0;
-         buffer = get_buffer_next(app, buffer, Access_ReadWriteVisible)){
-        Range_i64 range = buffer_range(app, buffer);
-        replace_in_range(app, buffer, range, pair.a, pair.b);
+    if(pair.valid)
+    {
+        for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWriteVisible);
+             buffer != 0;
+             buffer = get_buffer_next(app, buffer, Access_ReadWriteVisible)){
+            Range_i64 range = buffer_range(app, buffer);
+            replace_in_range(app, buffer, range, pair.a, pair.b);
+        }
     }
     
     global_history_edit_group_end(app);
+}
+
+fn GetIdentifierAtCursorString
+(Application_Links* app, Scratch_Block& scratch)
+{
+    View_ID view = get_active_view(app, Access_ReadWriteVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+    i64 pos = view_get_cursor_pos(app, view);
+    Range_i64 range = enclose_pos_alpha_numeric_underscore(app, buffer, pos);
+    String_Const_u8 replace = push_buffer_range(app, scratch, buffer, range);
+    return replace;
+}
+
+fn GetSelectionString
+(Application_Links* app, Scratch_Block& scratch)
+{
+    View_ID view = get_active_view(app, Access_ReadWriteVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+    Range_i64 range = get_view_range(app, view);
+    String_Const_u8 replace = push_buffer_range(app, scratch, buffer, range);
+    return replace;
+}
+
+struct query_user_replace_with_result
+{
+    bool Valid;
+    String_Const_u8 With;
+};
+
+fn QueryUserReplaceWith
+(Application_Links* app, Scratch_Block& scratch, String_Const_u8 ReplaceString)
+{
+    Query_Bar replace = {};
+    replace.prompt = string_u8_litexpr("Replace: ");
+    replace.string = ReplaceString;
+    start_query_bar(app, &replace, 0);
+    
+    Query_Bar *with = push_array(scratch, Query_Bar, 1);
+    u8 *with_space = push_array(scratch, u8, KB(1));
+    with->prompt = string_u8_litexpr("With: ");
+    with->string = SCu8(with_space, (u64)0);
+    with->string_capacity = KB(1);
+    
+    query_user_replace_with_result result = {};
+    if (query_user_string(app, with)){
+        result.Valid = true;
+        result.With = with->string;
+    }
+    return(result);
+}
+
+fn InternalReplaceInBuffer
+(Application_Links* app, Scratch_Block& scratch, String_Const_u8 ReplaceString)
+{
+    View_ID view = get_active_view(app, Access_ReadWriteVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+    Range_i64 range = buffer_range(app, buffer);
+    
+    Query_Bar_Group group(app);
+    auto Res = QueryUserReplaceWith(app, scratch, ReplaceString);
+    if (Res.Valid){
+        replace_in_range(app, buffer, range, ReplaceString, Res.With);
+    }
+}
+
+CUSTOM_COMMAND_SIG(ReplaceInBufferIdentifier)
+{
+    Scratch_Block scratch(app);
+    String_Const_u8 ReplaceString = GetIdentifierAtCursorString(app, scratch);
+    InternalReplaceInBuffer(app, scratch, ReplaceString);
+}
+
+CUSTOM_COMMAND_SIG(ReplaceInBufferSelection)
+{
+    Scratch_Block scratch(app);
+    String_Const_u8 ReplaceString = GetSelectionString(app, scratch);
+    InternalReplaceInBuffer(app, scratch, ReplaceString);
+}
+
+fn InternalReplaceInAllBuffers
+(Application_Links* app, Scratch_Block& scratch, String_Const_u8 ReplaceString)
+{
+    global_history_edit_group_begin(app);
+    
+    Query_Bar_Group group(app);
+    auto Res = QueryUserReplaceWith(app, scratch, ReplaceString);
+    if(Res.Valid)
+    {
+        for (Buffer_ID buffer = get_buffer_next(app, 0, Access_ReadWriteVisible);
+             buffer != 0;
+             buffer = get_buffer_next(app, buffer, Access_ReadWriteVisible))
+        {
+            Range_i64 range = buffer_range(app, buffer);
+            replace_in_range(app, buffer, range, ReplaceString, Res.With);
+        }
+    }
+    
+    global_history_edit_group_end(app);
+}
+
+CUSTOM_COMMAND_SIG(ReplaceInAllBuffersIdentifier)
+{
+    Scratch_Block scratch(app);
+    String_Const_u8 ReplaceString = GetIdentifierAtCursorString(app, scratch);
+    InternalReplaceInAllBuffers(app, scratch, ReplaceString);
+}
+
+CUSTOM_COMMAND_SIG(ReplaceInAllBuffersSelection)
+{
+    Scratch_Block scratch(app);
+    String_Const_u8 ReplaceString = GetSelectionString(app, scratch);
+    InternalReplaceInAllBuffers(app, scratch, ReplaceString);
 }
 
 function void
@@ -1709,6 +1825,16 @@ CUSTOM_DOC("If the current file is a *.cpp or *.h, attempts to open the correspo
         view = get_next_view_looped_primary_panels(app, view, Access_Always);
         view_set_buffer(app, view, new_buffer, 0);
         view_set_active(app, view);
+    }
+}
+
+CUSTOM_COMMAND_SIG(OpenMatchingFileCppInCurrentView)
+{
+    View_ID view = get_active_view(app, Access_Always);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
+    Buffer_ID new_buffer = 0;
+    if (get_cpp_matching_file(app, buffer, &new_buffer)){
+        view_set_buffer(app, view, new_buffer, 0);
     }
 }
 
