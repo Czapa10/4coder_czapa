@@ -32,6 +32,11 @@ static czapa_state CzapaState;
 
 static Snippet default_snippets[] = {
     {"fn", "\nfn \n()\n{\n\n}\n", 4, 6},
+    {"lambda_named_multiline", "\nauto  = [&]\n()\n{\n\n};\n", 6, 18},
+    {"lambda_named_multiline no arguments", "\nauto  = [&]()\n{\n\n};\n", 6, 17},
+    {"lambda_named_2lines", "\nauto  = [&]()\n{  };\n", 6, 16},
+    {"lambda_named", "auto  = [&](){  };", 5, 14},
+    {"lambda", "[](){  }", 6, 1},
     {"capture", "Capture(NameAndValue());", 21, 0},
     {"value", "ImGui::Value(NameAndValue());", 26, 0},
     {"slider_float", "ImGui::SliderFloat(NameAndPtr());", 30, 32},
@@ -48,11 +53,6 @@ static Snippet default_snippets[] = {
     {"switch", "switch()\n{\n\n}", 7, 11},
     {"enum_class", "\nenum class \n{\n\n};\n", 12, 15},
     {"enum", "\nenum \n{\n\n};\n", 6, 9},
-    {"lambda_named_multiline", "\nauto  = [&]\n()\n{\n\n};\n", 6, 18},
-    {"lambda_named_multiline no arguments", "\nauto  = [&]()\n{\n\n};\n", 6, 17},
-    {"lambda_named_2lines", "\nauto  = [&]()\n{  };\n", 6, 16},
-    {"lambda_named", "auto  = [&](){  };", 5, 14},
-    {"lambda", "[](){  }", 6, 1},
     {"assert", "Assert();", 7, 0},
     {"v0", "v2(0.f)", 7, 0},
     {"v1", "v2(1.f)", 7, 0},

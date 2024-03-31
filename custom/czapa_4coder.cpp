@@ -53,6 +53,9 @@ fn GetCursorAndMarkPositions
     return Res;
 }
 
+fn SetCursorPos(Application_Links* app, View_ID View, i64 Pos)
+{ view_set_cursor(app, View, seek_pos(Pos)); }
+
 fn SetCursorAndMarkPositionsTo
 (cursor_and_mark_positions Positions)
 {
@@ -323,6 +326,7 @@ CUSTOM_COMMAND_SIG(CopyTypeNameToVarNameWithReference)
 {
     ScopeUndoRedoBarrier;
     InternalCopyTypeNameToVarName(app);
+    WriteText(app, ", ");
     move_left_alpha_numeric_boundary(app);
     move_left(app);
     WriteText(app, "&");
@@ -331,8 +335,9 @@ CUSTOM_COMMAND_SIG(CopyTypeNameToVarNameWithReference)
 
 CUSTOM_COMMAND_SIG(CopyTypeNameToVarNameWithPointer)
 {
-    InternalCopyTypeNameToVarName(app);
     ScopeUndoRedoBarrier;
+    InternalCopyTypeNameToVarName(app);
+    WriteText(app, ", ");
     move_left_alpha_numeric_boundary(app);
     move_left(app);
     WriteText(app, "*");
@@ -862,6 +867,25 @@ CUSTOM_COMMAND_SIG(ChangeUntilBeginningOfLine)
     GoToInsertMode(app);
 }
 
+CUSTOM_COMMAND_SIG(PutBracesInsideParens)
+{
+    ScopeUndoRedoBarrier;
+    View_ID View = get_active_view(app, Access_ReadVisible);
+    Buffer_ID Buffer = view_get_buffer(app, View, Access_ReadVisible);
+    i64 CurrentCursorPos = view_get_cursor_pos(app, View);
+    Range_i64 Range = {};
+    if(find_surrounding_nest(app, Buffer, CurrentCursorPos, FindNest_Paren, &Range))
+    {
+        Range.min++;
+        Range.max--;
+        SetCursorPos(app, View, Range.min);
+        WriteText(app, "{");
+        SetCursorPos(app, View, Range.max + 1);
+        WriteText(app, "}");
+        SetCursorPos(app, View, CurrentCursorPos + 1);
+    }
+}
+
 CUSTOM_COMMAND_SIG(DeleteInsideParens)
 {
     ScopeUndoRedoBarrier;
@@ -1084,6 +1108,7 @@ CUSTOM_COMMAND_SIG(ReopenAllLoadedFiles)
             buffer_reopen(app, buffer, 0);
         }
     }
+    center_view(app);
 }
 
 CUSTOM_COMMAND_SIG(CreateBreakpointInRemedyBG)
@@ -1098,6 +1123,53 @@ CUSTOM_COMMAND_SIG(CreateBreakpointInRemedyBG)
     char Command[512];
     sprintf(Command, "start remedybg add-breakpoint-at-file %s %d", GetCString(FileName), (i32)Cursor.line);
     system(Command);
+}
+
+CUSTOM_COMMAND_SIG(PutIfBreakpoint)
+{ 
+    ScopeUndoRedoBarrier;
+    seek_end_of_line(app);
+    WriteText(app, "\n// TODO(now):\nif()\nu32 A = 0;"); 
+    CreateBreakpointInRemedyBG(app);
+    move_up(app);
+    seek_beginning_of_line(app);
+    MoveHorizontally(app, 3);
+}
+
+CUSTOM_COMMAND_SIG(InsertIf0Endif)
+{
+    place_begin_and_end_on_own_lines(app, "#if 0", "#endif");
+}
+
+fn InsertStuffOnCursorAndMarker
+(Application_Links* app, const char* StringA, const char* StringB)
+{
+    ScopeUndoRedoBarrier;
+    
+    auto Positions = GetCursorAndMarkPositions(app);
+    i64 PosA = Min(Positions.CursorPos, Positions.MarkPos);
+    i64 PosB = Max(Positions.CursorPos, Positions.MarkPos);
+    
+    ScopeTemporaryChangesToCursorAndMarkPos;
+    SetCursorPos(app, Positions.View, PosA);
+    WriteText(app, StringA);
+    SetCursorPos(app, Positions.View, PosB + strlen(StringA));
+    WriteText(app, StringB);
+}
+
+CUSTOM_COMMAND_SIG(InsertBracesOnMarkerAndCursor)
+{
+    InsertStuffOnCursorAndMarker(app, "{", "}");
+}
+
+CUSTOM_COMMAND_SIG(InsertParensOnMarkerAndCursor)
+{
+    InsertStuffOnCursorAndMarker(app, "(", ")");
+}
+
+CUSTOM_COMMAND_SIG(InsertQuotesOnMarkerAndCursor)
+{
+    InsertStuffOnCursorAndMarker(app, "\"", "\"");
 }
 
 fn SetupSharedKeyBindings
@@ -1156,8 +1228,8 @@ fn SetupKeyBindings
     BindInputNumbers(m, map);
     
     Bind(save_all_dirty_buffers, KeyCode_Escape);
-    Bind(reopen, KeyCode_F2);
-    Bind(ReopenAllLoadedFiles, KeyCode_F2, KeyCode_Alt);
+    Bind(ReopenAllLoadedFiles, KeyCode_F2);
+    Bind(reopen, KeyCode_F2, KeyCode_Alt);
     Bind(list_all_substring_locations_case_insensitive, KeyCode_F3);
     Bind(list_all_locations_of_identifier, KeyCode_F3, KeyCode_Control);
     Bind(list_all_substring_locations_of_selection, KeyCode_F3, KeyCode_Alt);
@@ -1209,8 +1281,12 @@ fn SetupKeyBindings
     Bind(MoveUpToBlankLineEnd, KeyCode_LeftBracket);
     Bind(MoveDownToBlankLineEnd, KeyCode_RightBracket);
     Bind(PutLineInsideBraces, KeyCode_LeftBracket, KeyCode_Shift);
-    Bind(ChangeMultipleLineBracesIntoSingleLineBraces, KeyCode_LeftBracket, KeyCode_Alt);
-    Bind(ChangeSingleLineBracesIntoMultipleLineBraces, KeyCode_LeftBracket, KeyCode_Alt, KeyCode_Control);
+    Bind(PutBracesInsideParens, KeyCode_LeftBracket, KeyCode_Shift, KeyCode_Alt);
+    Bind(InsertBracesOnMarkerAndCursor, KeyCode_LeftBracket, KeyCode_Alt);
+    Bind(InsertParensOnMarkerAndCursor, KeyCode_9, KeyCode_Alt);
+    Bind(InsertQuotesOnMarkerAndCursor, KeyCode_Quote, KeyCode_Alt);
+    Bind(ChangeMultipleLineBracesIntoSingleLineBraces, KeyCode_W, KeyCode_Alt);
+    Bind(ChangeSingleLineBracesIntoMultipleLineBraces, KeyCode_S, KeyCode_Alt);
     Bind(snippet_lister, KeyCode_Period);
     
     Bind(MoveRightAndGoToInsertMode, KeyCode_A);
@@ -1241,6 +1317,7 @@ fn SetupKeyBindings
     Bind(keyboard_macro_start_recording , KeyCode_Z, KeyCode_Shift);
     Bind(keyboard_macro_finish_recording, KeyCode_Z, KeyCode_Control);
     Bind(keyboard_macro_replay, KeyCode_Z);
+    Bind(InsertIf0Endif, KeyCode_Q, KeyCode_Alt);
     Bind(cut, KeyCode_X);
     Bind(Delete, KeyCode_X, KeyCode_Shift);
     Bind(GoToChangeMode, KeyCode_C);
@@ -1282,7 +1359,7 @@ fn SetupKeyBindings
     Bind(MoveAlphaNumbericOrCamelBoundaryRight, KeyCode_Right, KeyCode_Alt);
     Bind(NewLine, KeyCode_O, KeyCode_Alt);
     Bind(word_complete, KeyCode_Tab);
-    Bind(word_complete_drop_down, KeyCode_Tab, KeyCode_Control);
+    Bind(word_complete_drop_down, KeyCode_Tab, KeyCode_Shift);
     Bind(WriteArrowOperator, KeyCode_Minus, KeyCode_Alt);
     Bind(WriteReturn, KeyCode_R, KeyCode_Alt);
     Bind(WriteReturnFromVoidFunction, KeyCode_R, KeyCode_Alt, KeyCode_Shift);
@@ -1308,6 +1385,7 @@ fn SetupKeyBindings
     Bind(OpenSingleParenthesis, KeyCode_9, KeyCode_Shift, KeyCode_Alt);
     Bind(OpenQuotes, KeyCode_Quote, KeyCode_Shift);
     Bind(OpenSingleQuote, KeyCode_Quote, KeyCode_Shift, KeyCode_Alt);
+    Bind(PutIfBreakpoint, KeyCode_X, KeyCode_Alt);
     Bind(WriteConst, KeyCode_C, KeyCode_Alt);
     Bind(write_block, KeyCode_ForwardSlash, KeyCode_Alt);
     Bind(write_zero_struct, KeyCode_0, KeyCode_Alt);
@@ -1395,8 +1473,7 @@ fn SetupKeyBindings
     ParentMap(ModeMaps.Normal);
 }
 
-void
-custom_layer_init
+void custom_layer_init
 (Application_Links *App)
 {
     Thread_Context* tctx = get_thread_context(App);
@@ -1415,7 +1492,6 @@ custom_layer_init
 
 /* TODO:
 Changing variable name to my current style shortcut
-Take in parenthesis shortcut - Put opening one after the cursor, Put closing one before the last character in the line (presumebly the last character is ;)
 Make editor check if the file it has loaded has changed and then automatically load it again
 --
 (I asked qustion about it on the forum) Make the compilation shortcut open the build buffer under both panels
