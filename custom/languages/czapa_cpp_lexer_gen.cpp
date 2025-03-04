@@ -218,6 +218,7 @@ build_language_model(void){
     sm_key("NoExcept");
     sm_key("NullPtr");
     sm_key("Operator");
+    sm_key("Override");
     sm_key("Register");
     sm_key("This");
     sm_key("ThreadLocal", "thread_local");

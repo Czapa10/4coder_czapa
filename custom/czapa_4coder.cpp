@@ -178,6 +178,9 @@ CUSTOM_COMMAND_SIG(WriteAutoReference)
 CUSTOM_COMMAND_SIG(WriteConst)
 { WriteText(app, "const "); }
 
+CUSTOM_COMMAND_SIG(WriteConstexpr)
+{ WriteText(app, "constexpr "); }
+
 CUSTOM_COMMAND_SIG(WriteBool)
 { WriteText(app, "bool "); }
 
@@ -346,7 +349,7 @@ CUSTOM_COMMAND_SIG(CopyTypeNameToVarNameWithPointer)
 
 fn SetNormalModeColors()
 {
-    u32 Orange = GetColorInt(230, 100, 20);
+    u32 Orange = GetColorInt(229, 91, 0);
     active_color_table.arrays[defcolor_cursor].vals[0] = Orange;
     active_color_table.arrays[defcolor_at_cursor].vals[0] = White;
     active_color_table.arrays[defcolor_margin_active].vals[0] = Orange;
@@ -370,7 +373,7 @@ CUSTOM_COMMAND_SIG(GoToInsertMode)
 {
     SetCurrentMapId(app, CzapaState.ModeMaps.Insert);
     
-    u32 Green = GetColorInt(50, 230, 50);
+    u32 Green = GetColorInt(0, 153, 17);
     active_color_table.arrays[defcolor_cursor].vals[0] = Green;
     active_color_table.arrays[defcolor_at_cursor].vals[0] = White;
     active_color_table.arrays[defcolor_margin_active].vals[0] = Green;
@@ -1111,6 +1114,20 @@ CUSTOM_COMMAND_SIG(ReopenAllLoadedFiles)
     center_view(app);
 }
 
+CUSTOM_COMMAND_SIG(OpenCurrentFileInVsCode)
+{
+    Scratch_Block Scratch(app);
+    View_ID View = get_active_view(app, Access_Always);
+    Buffer_ID Buffer = view_get_buffer(app, View, Access_Always);
+    String_Const_u8 FileName = push_buffer_file_name(app, Scratch, Buffer);
+    i64 CursorPos = view_get_cursor_pos(app, View);
+    Buffer_Cursor Cursor = view_compute_cursor(app, View, seek_pos(CursorPos));
+    
+    char Command[512];
+    sprintf(Command, "Code --goto %s:%d", GetCString(FileName), (i32)Cursor.line);
+    system(Command);
+}
+
 CUSTOM_COMMAND_SIG(CreateBreakpointInRemedyBG)
 {
     Scratch_Block Scratch(app);
@@ -1228,6 +1245,7 @@ fn SetupKeyBindings
     BindInputNumbers(m, map);
     
     Bind(save_all_dirty_buffers, KeyCode_Escape);
+    Bind(toggle_mouse, KeyCode_F1);
     Bind(ReopenAllLoadedFiles, KeyCode_F2);
     Bind(reopen, KeyCode_F2, KeyCode_Alt);
     Bind(list_all_substring_locations_case_insensitive, KeyCode_F3);
@@ -1257,6 +1275,7 @@ fn SetupKeyBindings
     Bind(backspace_char, KeyCode_Backspace);
     Bind(delete_char, KeyCode_Delete);
     Bind(center_view, KeyCode_Minus);
+    Bind(OpenCurrentFileInVsCode, KeyCode_Tick);
     
     Bind(cursor_mark_swap, KeyCode_Q);
     Bind(SetCursorToInvisibleMark, KeyCode_Q, KeyCode_Shift);
@@ -1273,8 +1292,8 @@ fn SetupKeyBindings
     Bind(command_lister, KeyCode_I, KeyCode_Control);
     Bind(NewLine, KeyCode_O);
     Bind(NewLineStayingAtTheSamePlace, KeyCode_O, KeyCode_Alt);
-    Bind(interactive_open_or_new, KeyCode_O, KeyCode_Control);
-    Bind(interactive_switch_buffer, KeyCode_O, KeyCode_Control, KeyCode_Shift);
+    Bind(interactive_switch_buffer, KeyCode_O, KeyCode_Control);
+    Bind(interactive_open_or_new, KeyCode_O, KeyCode_Control, KeyCode_Shift);
     Bind(paste_and_indent, KeyCode_P);
     Bind(NewLineAndPasteAndIndent, KeyCode_P, KeyCode_Alt);
     Bind(open_in_other, KeyCode_P, KeyCode_Control);
@@ -1386,7 +1405,8 @@ fn SetupKeyBindings
     Bind(OpenQuotes, KeyCode_Quote, KeyCode_Shift);
     Bind(OpenSingleQuote, KeyCode_Quote, KeyCode_Shift, KeyCode_Alt);
     Bind(PutIfBreakpoint, KeyCode_X, KeyCode_Alt);
-    Bind(WriteConst, KeyCode_C, KeyCode_Alt);
+    Bind(WriteConstexpr, KeyCode_C, KeyCode_Alt);
+    Bind(WriteConst, KeyCode_C, KeyCode_Alt, KeyCode_Shift);
     Bind(write_block, KeyCode_ForwardSlash, KeyCode_Alt);
     Bind(write_zero_struct, KeyCode_0, KeyCode_Alt);
     Bind(open_long_braces, KeyCode_LeftBracket, KeyCode_Shift);
@@ -1477,15 +1497,15 @@ void custom_layer_init
 (Application_Links *App)
 {
     Thread_Context* tctx = get_thread_context(App);
-    
     default_framework_init(App);
     set_all_default_hooks(App);
     mapping_init(tctx, &framework_mapping);
-    
-    SetupKeyBindings(&framework_mapping);  
     SetNormalModeColors();
     
+    SetupKeyBindings(&framework_mapping);  
+    
     toggle_fullscreen(App);
+    toggle_mouse(App);
 }
 
 #endif
